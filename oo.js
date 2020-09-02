@@ -59,10 +59,26 @@
 		 [20200823].
 */
 
+/*
+	Added Code by Fiki Taufik Akbar Sobar (FT) | https://github.com/ftakbar102
+
+	02092020
+	1550 Create cartesiangrid element
+	1633 We need to access width and height of SVG data
+		 I make width and heigt svg element as global variables
+	1747 Finish cartesiangrid element (basicly its work)
+	2201 Add text-anchor style
+	2345 Finish the additional flip axis for cartesiangrid
+
+*/
 
 // Define global variables
 var oname = [];
 
+// 02092020
+// 1633 Define width and height of SVG canvas as global variables (FT)
+var svgHeight = 0;
+var svgWidth = 0;
 
 // Call some function to parse post content
 window.onload = function() {
@@ -121,6 +137,9 @@ function ooProcessElements() {
 	2025 Start this function.
 	2039 Fix that forget to copy native command, !work.
 	2047 Forget to put end of line, it works now.
+	
+	20200902
+	1610 Add cartesiangrid component (FT)
 */
 function translateOoText() {
 	var lines = arguments[0].split("\n");
@@ -148,6 +167,12 @@ function translateOoText() {
 			var sx = parseInt(cols[5]);
 			var sy = parseInt(cols[6]);
 			oo += createGridText(x1, y1, x2, y2, sx, sy) + "\n";
+		} else if(cols[0] == "cartesiangrid") {
+			var x1 = parseInt(cols[1]);
+			var y1 = parseInt(cols[2]);
+			var x2 = parseInt(cols[3]);
+			var y2 = parseInt(cols[4]); 
+			oo += createCartesianGrid(x1, y1, x2, y2) + "\n";
 		} else {
 			oo += lines[i] + "\n";
 		}
@@ -386,7 +411,8 @@ function getSVGBody() {
 	return lines.slice(1).join("\n");
 }
 
-
+// 20200902
+// 2200 Adding Text Anchor Style (FT)
 function createSVGStyle() {
 	style = arguments[1];
 	var cols = arguments[0].split(" ");
@@ -429,6 +455,9 @@ function createSVGStyle() {
 				break;
 			case "tz":
 				style["font-size"] = si[1];
+				break;
+			case "ta":
+				style["text-anchor"] = si[1];
 				break;
 			}
 		}
@@ -969,4 +998,105 @@ function vis() {
 			}
 		}
 	}
+}
+
+/////////////////////////////////////////
+//	Begin Code by FT
+////////////////////////////////////////
+
+/* 
+	createCartesianGrid()
+	Syntax: cartesiangrid xmin ymin xmax ymax 
+	
+	20200302 
+	1550 Create Element cartesiangrid
+	1746 Finish the main function
+	2345 Finish the flip axis function
+*/ 
+
+function createCartesianGrid(){
+
+	var xmin = (arguments[0] < arguments[2]) ? arguments[0] : arguments[2];
+	var ymin = (arguments[1] < arguments[3]) ? arguments[1] : arguments[3];
+	var xmax = (arguments[0] < arguments[2]) ? arguments[2] : arguments[0];
+	var ymax = (arguments[1] < arguments[3]) ? arguments[3] : arguments[1];
+	var pad = [30, 30];
+	var actSize = [svgWidth - pad[0], svgHeight - pad[1]];
+	var scale = [Math.floor((svgWidth - 2*pad[0])/(xmax-xmin)) , Math.floor((svgHeight - 2*pad[1])/(ymax-ymin))];
+	var posOrigin = [actSize[1], pad[0]];
+	var axisX = [0, 0];
+	var axisY = [0, 0];
+	var labelAxis = [0, 0];
+	var textAxis = [0, 0];
+	var oo = "";
+
+
+	if(xmin < 0 && xmax < 0)
+	{
+		posOrigin[1] = actSize[0] ;
+		axisX = [actSize[0],pad[1]];
+		labelAxis[0] = (pad[0] - 15);
+		textAxis[1] = (actSize[0]+25);
+
+	} else if (xmin < 0 && xmax > 0)
+	{
+		posOrigin[1] = pad[0] + scale[0]*(-xmin);
+		axisX = [pad[1], actSize[0]];
+		labelAxis[0] = (actSize[0] + 5);
+		textAxis[1] = (pad[0]-5);
+	} else 
+	{
+		posOrigin[1] = pad[0];
+		axisX = [pad[1], actSize[0]];
+		labelAxis[0] = (actSize[0] + 5);
+		textAxis[1] = (pad[0]-5);
+	}
+
+	if(ymin < 0 && ymax < 0)
+	{
+		posOrigin[0] = pad[1] ;
+		axisY = [pad[1],actSize[1]];
+		labelAxis[1] = (actSize[1] + 15);
+		textAxis[0] = (pad[1] - 10);
+	} else if (ymin < 0 && ymax > 0)
+	{
+		posOrigin[0] = pad[1] + scale[1]*(ymax);
+		axisY = [actSize[1], pad[1]];
+		labelAxis[1] = (pad[1] - 8);
+		textAxis[0] = (actSize[1] + 17);
+	} else 
+	{
+		posOrigin[0] = actSize[1];
+		axisY = [actSize[1], pad[1]];
+		labelAxis[1] = (pad[1] - 8);
+		textAxis[0] = (actSize[1] + 17);
+	}
+
+	// Create Grid
+	oo = createGridText(pad[0],pad[1],actSize[0],actSize[1],scale[0],scale[1]);
+
+	// Create Style for Axis
+	oo += "style lc:#000 ls:0 lw:1 lo:1\n";
+	// Create x Axis
+	oo += createArrowText(axisX[0], posOrigin[0], axisX[1], posOrigin[0]);
+	// Create y Axis
+	oo += createArrowText(posOrigin[1], axisY[0], posOrigin[1], axisY[1]);
+
+	// Create Axis Label
+	oo += "style lw:0 fc:#000 fo:1 ts:italic tw:normal tf:Times tz:18px\n";
+	oo += "text " + labelAxis[0] + " " + (posOrigin[0] + 3) + " x\n";
+	oo += "text " + (posOrigin[1]) + " " + labelAxis[1] + " y\n";
+
+	// Create x-Label
+	oo += "style lw:0 fc:#000 fo:1 ts:normal tw:normal tf:Times tz:14px ta:end\n";
+	
+	for(let i=xmin+1; i<xmax ;i++){
+		oo += "text " + (pad[0] + 5 + (i-xmin)*scale[0]) + " " + textAxis[0] + " " + i + "\n";
+	}
+	for(let i=ymax-1; i>ymin ;i--){
+		oo += "text " + textAxis[1] + " " + (pad[1] + 5 + (ymax-i)*scale[1]) + " " + i + "\n";
+	}
+
+	return oo;
+
 }
